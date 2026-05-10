@@ -1,0 +1,25 @@
+// Automatic FlutterFlow imports
+import '/backend/schema/structs/index.dart';
+import '/backend/schema/enums/enums.dart';
+import '/backend/supabase/supabase.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import 'index.dart'; // Imports other custom actions
+import '/flutter_flow/custom_functions.dart'; // Imports custom functions
+import 'package:flutter/material.dart';
+// Begin custom action code
+// DO NOT REMOVE OR MODIFY THE CODE ABOVE!
+
+import 'dart:io';
+import 'package:in_app_update/in_app_update.dart';
+
+Future inAppUpdate() async {
+  if (Platform.isAndroid) {
+    InAppUpdate.checkForUpdate().then((updateInfo) {
+      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
+        // Update is available, prompt user to update
+        InAppUpdate.performImmediateUpdate().catchError((e) => print(e));
+      }
+    }).catchError((e) => print(e));
+  }
+}

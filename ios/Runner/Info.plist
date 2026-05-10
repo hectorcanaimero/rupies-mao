@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>Rupies Profissional</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Rupies Profissional</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(FLUTTER_BUILD_NAME)</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <!--FF_REVERSED_CLIENT_ID-->
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLName</key>
+        <string>rupiesprofissional.com</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>rupiesprofissional</string>
+        </array>
+      </dict>
+    </array>
+    <key>FlutterDeepLinkingEnabled</key>
+    <true/>
+    <key>CFBundleVersion</key>
+    <string>$(FLUTTER_BUILD_NUMBER)</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>A App precisa de acesso à localização para sugerir serviços e estabelecimentos próximos à posição do usuário e melhorar a experiência de uso.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>A App precisa de acesso à câmera para ler códigos de barras e QR codes, além de permitir que o usuário envie fotos em mensagens e atualize sua imagem de perfil.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>A App precisa de acesso à sua biblioteca de fotos para que você possa enviar e compartilhar imagens dentro do aplicativo.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>In order to record audio</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>A App precisa de acesso à localização para sugerir serviços e estabelecimentos próximos à posição do usuário e melhorar a experiência de uso.</string>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>As informações coletadas serão utilizadas para trazer promoções e ofertas personalizadas. Exemplo, para pessoas com preferência por chocolate poderão receber promoções deste item com exclusividade aproveitar</string>
+    <key>PermissionGroupNotification</key>
+    <string>Enviaremos alertas importantes sobre candidatos, serviços e atualizações. Sem spam.</string>
+    <!-- Start of FirebaseAppDelegateProxy -->
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <true/>
+    <!-- End of FirebaseAppDelegateProxy -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIMainStoryboardFile</key>
+    <string>Main</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+  </dict>
+</plist>
