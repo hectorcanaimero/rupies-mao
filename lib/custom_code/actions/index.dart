@@ -3,3 +3,6 @@ export 'set_f_c_m_token.dart' show setFCMToken;
 export 'in_app_update.dart' show inAppUpdate;
 export 'app_review.dart' show appReview;
 export 'update_password.dart' show updatePassword;
+export 'lock_orientation.dart' show lockOrientation;
+export 'record_audio.dart'
+    show startAudioRecording, stopAudioRecording, cancelAudioRecording;

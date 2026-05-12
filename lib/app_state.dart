@@ -68,6 +68,12 @@ class FFAppState extends ChangeNotifier {
     _popup = value;
     prefs.setBool('ff_popup', value);
   }
+
+  String _initialRoute = '';
+  String get initialRoute => _initialRoute;
+  set initialRoute(String value) {
+    _initialRoute = value;
+  }
 }
 
 void _safeInit(Function() initializeField) {

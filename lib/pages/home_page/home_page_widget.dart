@@ -6,18 +6,18 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/widgets/banner_widget/banner_widget_widget.dart';
 import '/widgets/card_service_widget/card_service_widget_widget.dart';
 import '/widgets/header_widget/header_widget_widget.dart';
-import '/widgets/load_widget/load_widget_widget.dart';
 import '/widgets/nav_bar_widget/nav_bar_widget_widget.dart';
 import '/widgets/pop_up_widget/pop_up_widget_widget.dart';
 import '/widgets/rating_widget/rating_widget_widget.dart';
 import '/widgets/servicos_aceitos_widget/servicos_aceitos_widget_widget.dart';
 import '/custom_code/actions/index.dart' as actions;
+import '/custom_code/widgets/index.dart' as widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'dart:async';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'home_page_model.dart';
@@ -47,9 +47,6 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
       logFirebaseEvent('HOME_PAGE_PAGE_HomePage_ON_INIT_STATE');
-      logFirebaseEvent('HomePage_refresh_database_request');
-      safeSetState(() => _model.requestCompleter = null);
-      await _model.waitForRequestCompleted();
       await Future.wait([
         Future(() async {
           if (FFAppState().user.endRegister) {
@@ -164,6 +161,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                   );
                 },
               );
+              FFAppState().popup = true;
             }
           }
         }),
@@ -187,8 +185,6 @@ class _HomePageWidgetState extends State<HomePageWidget> {
         }),
       ]);
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
@@ -196,6 +192,17 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     _model.dispose();
 
     super.dispose();
+  }
+
+  Future<void> _refreshFeed() async {
+    safeSetState(() => _model.requestCompleter = null);
+    await WidgetsBinding.instance.endOfFrame;
+    try {
+      await _model.requestCompleter?.future
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // FutureBuilder shows the error state — nothing else to do here.
+    }
   }
 
   @override
@@ -234,143 +241,155 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                         width: double.infinity,
                         height: double.infinity,
                         decoration: BoxDecoration(),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    12.0, 0.0, 12.0, 15.0),
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(9.0),
-                                  ),
-                                  child: wrapWithModel(
-                                    model: _model.bannerWidgetModel,
-                                    updateCallback: () => safeSetState(() {}),
-                                    child: BannerWidgetWidget(
-                                      position: 11,
-                                      height: 200.0,
+                        child: RefreshIndicator(
+                          onRefresh: _refreshFeed,
+                          color: FlutterFlowTheme.of(context).primary,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      12.0, 0.0, 12.0, 15.0),
+                                  child: Container(
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(9.0),
+                                    ),
+                                    child: wrapWithModel(
+                                      model: _model.bannerWidgetModel,
+                                      updateCallback: () => safeSetState(() {}),
+                                      child: BannerWidgetWidget(
+                                        position: 11,
+                                        height: 200.0,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context).alternate,
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color:
+                                        FlutterFlowTheme.of(context).alternate,
+                                  ),
+                                  child: wrapWithModel(
+                                    model: _model.servicosAceitosWidgetModel,
+                                    updateCallback: () => safeSetState(() {}),
+                                    child: ServicosAceitosWidgetWidget(),
+                                  ),
                                 ),
-                                child: wrapWithModel(
-                                  model: _model.servicosAceitosWidgetModel,
-                                  updateCallback: () => safeSetState(() {}),
-                                  child: ServicosAceitosWidgetWidget(),
-                                ),
-                              ),
-                              Align(
-                                alignment: AlignmentDirectional(-1.0, 0.0),
-                                child: Padding(
-                                  padding: EdgeInsetsDirectional.fromSTEB(
-                                      12.0, 12.0, 12.0, 6.0),
-                                  child: Text(
-                                    'Serviços Disponíveis',
-                                    style: FlutterFlowTheme.of(context)
-                                        .titleLarge
-                                        .override(
-                                          font: GoogleFonts.urbanist(
+                                Align(
+                                  alignment: AlignmentDirectional(-1.0, 0.0),
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                        12.0, 12.0, 12.0, 6.0),
+                                    child: Text(
+                                      'Serviços Disponíveis',
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleLarge
+                                          .override(
+                                            font: GoogleFonts.urbanist(
+                                              fontWeight: FontWeight.w600,
+                                              fontStyle:
+                                                  FlutterFlowTheme.of(context)
+                                                      .titleLarge
+                                                      .fontStyle,
+                                            ),
+                                            fontSize: 18.0,
+                                            letterSpacing: 0.0,
                                             fontWeight: FontWeight.w600,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
                                                     .titleLarge
                                                     .fontStyle,
                                           ),
-                                          fontSize: 18.0,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.w600,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .titleLarge
-                                                  .fontStyle,
-                                        ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    12.0, 0.0, 12.0, 0.0),
-                                child: FutureBuilder<
-                                    List<
-                                        ViewServicesWithCategoriesFilteredExcludeRow>>(
-                                  future: (_model.requestCompleter ??= Completer<
-                                          List<
-                                              ViewServicesWithCategoriesFilteredExcludeRow>>()
-                                        ..complete(
-                                            ViewServicesWithCategoriesFilteredExcludeTable()
-                                                .queryRows(
-                                          queryFn: (q) => q
-                                              .eqOrNull(
-                                                'endRegister',
-                                                true,
-                                              )
-                                              .eqOrNull(
-                                                'endRegister',
-                                                true,
-                                              )
-                                              .order('condition',
-                                                  ascending: true)
-                                              .order('created_at'),
-                                        )))
-                                      .future,
-                                  builder: (context, snapshot) {
-                                    // Customize what your widget looks like when it's loading.
-                                    if (!snapshot.hasData) {
-                                      return Center(
-                                        child: SizedBox(
-                                          width: 40.0,
-                                          height: 40.0,
-                                          child: SpinKitPulse(
-                                            color: FlutterFlowTheme.of(context)
-                                                .secondary,
-                                            size: 40.0,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    List<ViewServicesWithCategoriesFilteredExcludeRow>
-                                        listViewViewServicesWithCategoriesFilteredExcludeRowList =
-                                        snapshot.data!;
-
-                                    if (listViewViewServicesWithCategoriesFilteredExcludeRowList
-                                        .isEmpty) {
-                                      return LoadWidgetWidget(
-                                        message: 'Sem Dados a Mostrar',
-                                        height: 400.0,
-                                      );
-                                    }
-
-                                    return ListView.builder(
-                                      padding: EdgeInsets.fromLTRB(
-                                        0,
-                                        6.0,
-                                        0,
-                                        100.0,
-                                      ),
-                                      primary: false,
-                                      shrinkWrap: true,
-                                      scrollDirection: Axis.vertical,
-                                      itemCount:
-                                          listViewViewServicesWithCategoriesFilteredExcludeRowList
-                                              .length,
-                                      itemBuilder: (context, listViewIndex) {
-                                        final listViewViewServicesWithCategoriesFilteredExcludeRow =
-                                            listViewViewServicesWithCategoriesFilteredExcludeRowList[
-                                                listViewIndex];
-                                        return Visibility(
-                                          visible: functions.validateNotUid(
-                                              listViewViewServicesWithCategoriesFilteredExcludeRow
-                                                  .candidatedIds
-                                                  .toList(),
-                                              currentUserUid),
-                                          child: Container(
+                                Padding(
+                                  padding: EdgeInsetsDirectional.fromSTEB(
+                                      12.0, 0.0, 12.0, 0.0),
+                                  child: FutureBuilder<
+                                      List<
+                                          ViewServicesWithCategoriesFilteredExcludeRow>>(
+                                    future: (_model.requestCompleter ??= Completer<
+                                            List<
+                                                ViewServicesWithCategoriesFilteredExcludeRow>>()
+                                          ..complete(
+                                              ViewServicesWithCategoriesFilteredExcludeTable()
+                                                  .queryRows(
+                                            queryFn: (q) => q
+                                                .eqOrNull(
+                                                  'endRegister',
+                                                  true,
+                                                )
+                                                .eqOrNull(
+                                                  'endRegister',
+                                                  true,
+                                                )
+                                                .order('condition',
+                                                    ascending: true)
+                                                .order('created_at'),
+                                          )))
+                                        .future,
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return ListView.builder(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              0, 6, 0, 100),
+                                          primary: false,
+                                          shrinkWrap: true,
+                                          itemCount: 5,
+                                          itemBuilder: (_, __) =>
+                                              const widgets
+                                                  .ServiceCardSkeleton(),
+                                        );
+                                      }
+                                      if (snapshot.hasError) {
+                                        FirebaseCrashlytics.instance
+                                            .recordError(
+                                          snapshot.error,
+                                          snapshot.stackTrace,
+                                          reason: 'home_feed_query_failed',
+                                          fatal: false,
+                                        );
+                                        return widgets.FeedStateWidget(
+                                          height: 400,
+                                          variant: widgets
+                                              .FeedStateVariant.error,
+                                          message:
+                                              'Não foi possível carregar os serviços. Verifique sua conexão e tente novamente.',
+                                          actionLabel: 'Tentar novamente',
+                                          onAction: _refreshFeed,
+                                        );
+                                      }
+                                      final allRows =
+                                          snapshot.data ?? const [];
+                                      final rows = allRows
+                                          .where((row) =>
+                                              functions.validateNotUid(
+                                                  row.candidatedIds.toList(),
+                                                  currentUserUid))
+                                          .toList();
+                                      if (rows.isEmpty) {
+                                        return widgets.FeedStateWidget(
+                                          height: 400,
+                                          message: 'Sem Dados a Mostrar',
+                                          actionLabel: 'Atualizar',
+                                          onAction: _refreshFeed,
+                                        );
+                                      }
+                                      return ListView.builder(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            0, 6, 0, 100),
+                                        primary: false,
+                                        shrinkWrap: true,
+                                        scrollDirection: Axis.vertical,
+                                        itemCount: rows.length,
+                                        itemBuilder: (context, listViewIndex) {
+                                          final row = rows[listViewIndex];
+                                          return Container(
                                             decoration: BoxDecoration(),
                                             child: wrapWithModel(
                                               model: _model
@@ -385,18 +404,17 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                                                 key: Key(
                                                   'Key17o_${listViewIndex.toString()}',
                                                 ),
-                                                data:
-                                                    listViewViewServicesWithCategoriesFilteredExcludeRow,
+                                                data: row,
                                               ),
                                             ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

@@ -22,3 +22,5 @@ export '/users/reset_senha_page/reset_senha_page_widget.dart'
     show ResetSenhaPageWidget;
 export '/pages/sac_page/sac_page_widget.dart' show SacPageWidget;
 export '/pages/termos_page/termos_page_widget.dart' show TermosPageWidget;
+export '/pages/notifications_page/notifications_page_widget.dart'
+    show NotificationsPageWidget;

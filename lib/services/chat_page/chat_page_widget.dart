@@ -1,5 +1,9 @@
 import '/backend/schema/enums/enums.dart';
 import '/backend/supabase/supabase.dart';
+import '/custom_code/actions/record_audio.dart';
+import '/custom_code/widgets/audio_message_player.dart';
+import 'dart:async';
+import 'dart:io';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -10,7 +14,9 @@ import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:octo_image/octo_image.dart';
 import 'chat_page_model.dart';
 export 'chat_page_model.dart';
 
@@ -67,6 +73,32 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
     _model.contentTextController ??= TextEditingController();
     _model.contentFocusNode ??= FocusNode();
 
+    // Subscribe to typing broadcast channel.
+    _model.typingChannel = SupaFlow.client.channel('chat:${widget.chatUID}');
+    _model.typingChannel!
+        .onBroadcast(
+          event: 'typing',
+          callback: (payload) {
+            if (mounted) {
+              safeSetState(() {
+                _model.isOtherUserTyping = true;
+              });
+              _model.typingTimer?.cancel();
+              _model.typingTimer = Timer(
+                const Duration(seconds: 3),
+                () {
+                  if (mounted) {
+                    safeSetState(() {
+                      _model.isOtherUserTyping = false;
+                    });
+                  }
+                },
+              );
+            }
+          },
+        )
+        .subscribe();
+
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
@@ -104,11 +136,6 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
             ),
           );
         }
-        List<ChatsRow> chatPageChatsRowList = snapshot.data!;
-
-        final chatPageChatsRow =
-            chatPageChatsRowList.isNotEmpty ? chatPageChatsRowList.first : null;
-
         return GestureDetector(
           onTap: () {
             FocusScope.of(context).unfocus();
@@ -229,6 +256,9 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                           ),
                                           reverse: true,
                                           scrollDirection: Axis.vertical,
+                                          controller:
+                                              _model.chatListController ??=
+                                                  ScrollController(),
                                           itemCount: containerVar.length,
                                           separatorBuilder: (_, __) =>
                                               SizedBox(height: 15.0),
@@ -376,17 +406,30 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                                                           borderRadius:
                                                                               BorderRadius.circular(8.0),
                                                                           child:
-                                                                              Image.network(
-                                                                            valueOrDefault<String>(
-                                                                              functions.textToImage(containerVarItem.content!),
-                                                                              'https://images.unsplash.com/photo-1611604548018-d56bbd85d681?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTYyMDF8MHwxfHNlYXJjaHwzfHxsZWdvfGVufDB8fHx8MTc0NzgwODExMnww&ixlib=rb-4.1.0&q=80&w=1080',
-                                                                            ),
+                                                                              SizedBox(
                                                                             width:
                                                                                 double.infinity,
                                                                             height:
                                                                                 200.0,
-                                                                            fit:
-                                                                                BoxFit.cover,
+                                                                            child:
+                                                                                OctoImage(
+                                                                              placeholderBuilder: _model.uploadedLocalFile_uploadDataDgg.blurHash !=
+                                                                                      null
+                                                                                  ? (_) => SizedBox.expand(
+                                                                                        child: Image(
+                                                                                          image: BlurHashImage(_model.uploadedLocalFile_uploadDataDgg.blurHash!),
+                                                                                          fit: BoxFit.cover,
+                                                                                        ),
+                                                                                      )
+                                                                                  : null,
+                                                                              image: NetworkImage(
+                                                                                valueOrDefault<String>(
+                                                                                  functions.textToImage(containerVarItem.content!),
+                                                                                  'https://images.unsplash.com/photo-1611604548018-d56bbd85d681?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTYyMDF8MHwxfHNlYXJjaHwzfHxsZWdvfGVufDB8fHx8MTc0NzgwODExMnww&ixlib=rb-4.1.0&q=80&w=1080',
+                                                                                ),
+                                                                              ),
+                                                                              fit: BoxFit.cover,
+                                                                            ),
                                                                           ),
                                                                         ),
                                                                       ),
@@ -398,16 +441,15 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                                                   TypeMessage
                                                                       .audio
                                                                       .name) {
-                                                                return Container(
-                                                                  width: double
-                                                                      .infinity,
-                                                                  height: 100.0,
-                                                                  decoration:
-                                                                      BoxDecoration(
-                                                                    color: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .secondaryBackground,
-                                                                  ),
+                                                                return AudioMessagePlayer(
+                                                                  audioUrl:
+                                                                      containerVarItem
+                                                                          .content!,
+                                                                  isOwn: containerVarItem
+                                                                          .typeMessage ==
+                                                                      MessageSendType
+                                                                          .Prestador
+                                                                          .name,
                                                                 );
                                                               } else {
                                                                 return Text(
@@ -459,28 +501,31 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                                                 MainAxisSize
                                                                     .max,
                                                             children: [
-                                                              if (!containerVarItem
-                                                                  .readMessage!)
+                                                              if (containerVarItem
+                                                                      .typeMessage ==
+                                                                  MessageSendType
+                                                                      .Prestador
+                                                                      .name)
                                                                 Builder(
                                                                   builder:
                                                                       (context) {
                                                                     if (containerVarItem
-                                                                            .readMessage ??
-                                                                        false) {
+                                                                            .readMessage ==
+                                                                        true) {
                                                                       return Icon(
                                                                         Icons
-                                                                            .check_rounded,
-                                                                        color: FlutterFlowTheme.of(context)
-                                                                            .secondaryText,
+                                                                            .done_all,
+                                                                        color: Color(
+                                                                            0xFF53BDEB),
                                                                         size:
                                                                             15.0,
                                                                       );
                                                                     } else {
                                                                       return Icon(
                                                                         Icons
-                                                                            .done_all,
-                                                                        color: FlutterFlowTheme.of(context)
-                                                                            .secondary,
+                                                                            .check_rounded,
+                                                                        color: Color(
+                                                                            0xFF667781),
                                                                         size:
                                                                             15.0,
                                                                       );
@@ -612,6 +657,26 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                         },
                       ),
                     ),
+                    if (_model.isOtherUserTyping)
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                            20.0, 4.0, 20.0, 4.0),
+                        color: FlutterFlowTheme.of(context).primaryBackground,
+                        child: Text(
+                          'digitando...',
+                          style: FlutterFlowTheme.of(context)
+                              .bodySmall
+                              .override(
+                                font: GoogleFonts.urbanist(
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                color: Color(0xFF667781),
+                                fontSize: 12.0,
+                                letterSpacing: 0.0,
+                              ),
+                        ),
+                      ),
                     Container(
                       width: double.infinity,
                       height: 70.0,
@@ -632,13 +697,17 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                 focusNode: _model.contentFocusNode,
                                 onChanged: (_) => EasyDebounce.debounce(
                                   '_model.contentTextController',
-                                  Duration(milliseconds: 2000),
+                                  Duration(milliseconds: 300),
                                   () async {
                                     logFirebaseEvent(
                                         'CHAT_content_ON_TEXTFIELD_CHANGE');
                                     logFirebaseEvent(
                                         'content_update_page_state');
                                     _model.typeText = true;
+                                    _model.typingChannel?.sendBroadcastMessage(
+                                      event: 'typing',
+                                      payload: {},
+                                    );
                                     safeSetState(() {});
                                   },
                                 ),
@@ -646,22 +715,16 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                   logFirebaseEvent(
                                       'CHAT_content_ON_TEXTFIELD_SUBMIT');
                                   if (_model.contentTextController.text != '') {
+                                    final messageText =
+                                        _model.contentTextController.text;
                                     logFirebaseEvent('content_backend_call');
                                     _model.create =
                                         await ChatsMessageTable().insert({
                                       'chatId': widget.chatUID,
-                                      'content':
-                                          _model.contentTextController.text,
+                                      'content': messageText,
                                       'typeMessage':
                                           MessageSendType.Prestador.name,
                                       'sendType': TypeMessage.text.name,
-                                    });
-                                    logFirebaseEvent('content_backend_call');
-                                    await NotificationsTable().insert({
-                                      'title': 'Psss! Tem um mensagem novo',
-                                      'body':
-                                          'Um prestador mandou mensagem para você',
-                                      'recipient_id': chatPageChatsRow?.userId,
                                     });
                                     logFirebaseEvent(
                                         'content_reset_form_fields');
@@ -671,6 +734,14 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                     logFirebaseEvent(
                                         'content_update_page_state');
                                     _model.typeText = false;
+                                    if (_model.chatListController?.hasClients ??
+                                        false) {
+                                      _model.chatListController!.animateTo(
+                                        0.0,
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeOut,
+                                      );
+                                    }
                                     safeSetState(() {});
                                     logFirebaseEvent('content_rebuild_page');
                                     safeSetState(() {});
@@ -804,73 +875,89 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.max,
                                   children: [
-                                    InkWell(
-                                      splashColor: Colors.transparent,
-                                      focusColor: Colors.transparent,
-                                      hoverColor: Colors.transparent,
-                                      highlightColor: Colors.transparent,
-                                      onTap: () async {
-                                        logFirebaseEvent(
-                                            'CHAT_PAGE_PAGE_Icon_9f7zesqw_ON_TAP');
-                                        if (_model.contentTextController.text !=
-                                                '') {
-                                          logFirebaseEvent('Icon_backend_call');
-                                          _model.create =
-                                              await ChatsMessageTable().insert({
-                                            'chatId': widget.chatUID,
-                                            'content': _model
-                                                .contentTextController.text,
-                                            'typeMessage':
-                                                MessageSendType.Prestador.name,
-                                            'sendType': TypeMessage.text.name,
-                                          });
-                                          logFirebaseEvent('Icon_backend_call');
-                                          await NotificationsTable().insert({
-                                            'title':
-                                                'Psss! Tem um mensagem novo',
-                                            'body':
-                                                'Um prestador mandou mensagem para você',
-                                            'recipient_id':
-                                                chatPageChatsRow?.userId,
-                                          });
-                                          logFirebaseEvent(
-                                              'Icon_reset_form_fields');
-                                          safeSetState(() {
-                                            _model.contentTextController
-                                                ?.clear();
-                                          });
-                                          logFirebaseEvent(
-                                              'Icon_update_page_state');
-                                          _model.typeText = false;
-                                          safeSetState(() {});
-                                          logFirebaseEvent('Icon_rebuild_page');
-                                          safeSetState(() {});
-                                        }
-
-                                        safeSetState(() {});
-                                      },
-                                      child: Icon(
-                                        Icons.send_rounded,
-                                        color: Color(0xFF727272),
-                                        size: 30.0,
-                                      ),
-                                    ),
-                                    InkWell(
-                                      splashColor: Colors.transparent,
-                                      focusColor: Colors.transparent,
-                                      hoverColor: Colors.transparent,
-                                      highlightColor: Colors.transparent,
-                                      onTap: () async {
-                                        logFirebaseEvent(
-                                            'CHAT_PAGE_PAGE_Icon_6erqnae8_ON_TAP');
-                                        logFirebaseEvent(
-                                            'Icon_upload_media_to_supabase');
-                                        final selectedMedia =
-                                            await selectMediaWithSourceBottomSheet(
-                                          context: context,
-                                          storageFolderPath: '',
-                                          allowPhoto: true,
-                                        );
+                                    Builder(
+                                      builder: (context) {
+                                        if (_model.typeText) {
+                                          return InkWell(
+                                            splashColor: Colors.transparent,
+                                            focusColor: Colors.transparent,
+                                            hoverColor: Colors.transparent,
+                                            highlightColor: Colors.transparent,
+                                            onTap: () async {
+                                              logFirebaseEvent(
+                                                  'CHAT_PAGE_PAGE_Icon_9f7zesqw_ON_TAP');
+                                              if (_model.contentTextController
+                                                      .text !=
+                                                  '') {
+                                                final messageText = _model
+                                                    .contentTextController.text;
+                                                logFirebaseEvent(
+                                                    'Icon_backend_call');
+                                                _model.create =
+                                                    await ChatsMessageTable()
+                                                        .insert({
+                                                  'chatId': widget.chatUID,
+                                                  'content': messageText,
+                                                  'typeMessage': MessageSendType
+                                                      .Prestador.name,
+                                                  'sendType':
+                                                      TypeMessage.text.name,
+                                                });
+                                                logFirebaseEvent(
+                                                    'Icon_reset_form_fields');
+                                                safeSetState(() {
+                                                  _model.contentTextController
+                                                      ?.clear();
+                                                  _model.typeText = false;
+                                                });
+                                                if (_model.chatListController
+                                                        ?.hasClients ??
+                                                    false) {
+                                                  _model.chatListController!
+                                                      .animateTo(
+                                                    0.0,
+                                                    duration: Duration(
+                                                        milliseconds: 300),
+                                                    curve: Curves.easeOut,
+                                                  );
+                                                }
+                                              }
+                                            },
+                                            child: Icon(
+                                              Icons.send_rounded,
+                                              color: FlutterFlowTheme.of(
+                                                      context)
+                                                  .primaryText,
+                                              size: 30.0,
+                                            ),
+                                          );
+                                        } else {
+                                          return Row(
+                                            mainAxisSize: MainAxisSize.max,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              InkWell(
+                                                splashColor: Colors.transparent,
+                                                focusColor: Colors.transparent,
+                                                hoverColor: Colors.transparent,
+                                                highlightColor:
+                                                    Colors.transparent,
+                                                onTap: () async {
+                                                  logFirebaseEvent(
+                                                      'CHAT_PAGE_PAGE_Icon_6erqnae8_ON_TAP');
+                                                  logFirebaseEvent(
+                                                      'Icon_upload_media_to_supabase');
+                                                  final selectedMedia =
+                                                      await selectMediaWithSourceBottomSheet(
+                                                    context: context,
+                                                    storageFolderPath:
+                                                        widget.chatUID,
+                                                    imageQuality: 70,
+                                                    maxWidth: 1080.0,
+                                                    allowPhoto: true,
+                                                    includeBlurHash: true,
+                                                  );
                                         if (selectedMedia != null &&
                                             selectedMedia.every((m) =>
                                                 validateFileFormat(
@@ -936,15 +1023,17 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                             'typeMessage':
                                                 MessageSendType.Prestador.name,
                                           });
-                                          logFirebaseEvent('Icon_backend_call');
-                                          await NotificationsTable().insert({
-                                            'title':
-                                                'Psss! Tem um mensagem novo',
-                                            'body':
-                                                'Um prestador mandou mensagem para você',
-                                            'recipient_id':
-                                                chatPageChatsRow?.userId,
-                                          });
+                                          if (_model.chatListController
+                                                  ?.hasClients ??
+                                              false) {
+                                            _model.chatListController!
+                                                .animateTo(
+                                              0.0,
+                                              duration:
+                                                  Duration(milliseconds: 300),
+                                              curve: Curves.easeOut,
+                                            );
+                                          }
                                           logFirebaseEvent('Icon_rebuild_page');
                                           safeSetState(() {});
                                           logFirebaseEvent(
@@ -962,13 +1051,102 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
                                           });
                                         }
                                       },
-                                      child: Icon(
-                                        Icons.camera_alt_rounded,
-                                        color: Color(0xFF727272),
-                                        size: 30.0,
-                                      ),
+                                                child: Icon(
+                                                  Icons.camera_alt_rounded,
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .primaryText,
+                                                  size: 30.0,
+                                                ),
+                                              ),
+                                              InkWell(
+                                                splashColor: Colors.transparent,
+                                                focusColor: Colors.transparent,
+                                                hoverColor: Colors.transparent,
+                                                highlightColor:
+                                                    Colors.transparent,
+                                                onTap: () async {
+                                                  if (_model.isRecording) {
+                                          final audioPath =
+                                              await stopAudioRecording();
+                                          safeSetState(() {
+                                            _model.isRecording = false;
+                                          });
+                                          if (audioPath != null) {
+                                            final file = File(audioPath);
+                                            final bytes =
+                                                await file.readAsBytes();
+                                            final fileName =
+                                                'audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                                            final storagePath =
+                                                '${widget.chatUID}/$fileName';
+
+                                            await SupaFlow.client.storage
+                                                .from('App')
+                                                .uploadBinary(
+                                                  storagePath,
+                                                  bytes,
+                                                  fileOptions: FileOptions(
+                                                    contentType: 'audio/mp4',
+                                                  ),
+                                                );
+
+                                            final audioUrl = SupaFlow
+                                                .client.storage
+                                                .from('App')
+                                                .getPublicUrl(storagePath);
+
+                                            await ChatsMessageTable().insert({
+                                              'chatId': widget.chatUID,
+                                              'content': audioUrl,
+                                              'sendType':
+                                                  TypeMessage.audio.name,
+                                              'typeMessage': MessageSendType
+                                                  .Prestador.name,
+                                            });
+
+                                            if (_model.chatListController
+                                                    ?.hasClients ??
+                                                false) {
+                                              _model.chatListController!
+                                                  .animateTo(
+                                                0.0,
+                                                duration:
+                                                    Duration(milliseconds: 300),
+                                                curve: Curves.easeOut,
+                                              );
+                                            }
+                                          }
+                                        } else {
+                                          final started =
+                                              await startAudioRecording();
+                                          if (started) {
+                                            safeSetState(() {
+                                              _model.isRecording = true;
+                                            });
+                                          }
+                                        }
+                                      },
+                                                child: Icon(
+                                                  _model.isRecording
+                                                      ? Icons.stop_circle
+                                                      : Icons.mic_rounded,
+                                                  color: _model.isRecording
+                                                      ? FlutterFlowTheme.of(
+                                                              context)
+                                                          .error
+                                                      : FlutterFlowTheme.of(
+                                                              context)
+                                                          .primaryText,
+                                                  size: 30.0,
+                                                ),
+                                              ),
+                                            ].divide(SizedBox(width: 15.0)),
+                                          );
+                                        }
+                                      },
                                     ),
-                                  ].divide(SizedBox(width: 12.0)),
+                                  ],
                                 ),
                               ),
                             ),

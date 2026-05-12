@@ -10,16 +10,19 @@ import 'package:flutter/material.dart';
 // Begin custom action code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
-import 'dart:io';
-import 'package:in_app_update/in_app_update.dart';
+import 'package:flutter/services.dart';
 
-Future inAppUpdate() async {
-  if (Platform.isAndroid) {
-    InAppUpdate.checkForUpdate().then((updateInfo) {
-      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
-        // Update is available, prompt user to update
-        InAppUpdate.performImmediateUpdate().catchError((e) => debugPrint('inAppUpdate error: $e'));
-      }
-    }).catchError((e) => debugPrint('inAppUpdate error: $e'));
-  }
+Future lockOrientation() async {
+  // Add your function code here!
+  await SystemChrome.setPreferredOrientations(
+    [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
+  );
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarBrightness: Brightness.light, // iOS: dark icons
+      statusBarIconBrightness: Brightness.dark, // Android: dark icons
+    ),
+  );
 }

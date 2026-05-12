@@ -10,10 +10,13 @@ import 'package:flutter/material.dart';
 // Begin custom action code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<bool> updatePassword(String newPassword) async {
-  // Add your function code here!
+  if (newPassword.length < 8) {
+    return false;
+  }
   try {
     final supabase = SupaFlow.client;
 
@@ -23,14 +26,15 @@ Future<bool> updatePassword(String newPassword) async {
       ),
     );
 
-    if (response.user == null) {
-      return false;
-    }
-
-    return true;
-  } catch (e) {
-    // Log opcional si usás Crashlytics o similar
-    print('Error updating password: $e');
+    return response.user != null;
+  } catch (e, stack) {
+    debugPrint('Error updating password');
+    FirebaseCrashlytics.instance.recordError(
+      e,
+      stack,
+      reason: 'updatePassword failed',
+      fatal: false,
+    );
     return false;
   }
 }

@@ -21,9 +21,8 @@ void main() async {
   GoRouter.optionURLReflectsImperativeAPIs = true;
   usePathUrlStrategy();
 
-  await initFirebase();
-
-  await SupaFlow.initialize();
+  // Firebase y Supabase en paralelo — ninguno depende del otro
+  await Future.wait([initFirebase(), SupaFlow.initialize()]);
 
   final appState = FFAppState(); // Initialize FFAppState
   await appState.initializePersistedState();
@@ -32,16 +31,20 @@ void main() async {
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   }
 
-  // Start final custom actions code
-  await actions.setFCMToken();
-  await actions.inAppUpdate();
-  await actions.appTracking();
-  // End final custom actions code
+  // lockOrientation es síncrono y crítico para el layout inicial
+  await actions.lockOrientation();
 
+  // setFCMToken, appTracking e inAppUpdate no bloquean la UI inicial —
+  // se lanzan en background después de runApp
   runApp(ChangeNotifierProvider(
     create: (context) => appState,
     child: MyApp(),
   ));
+
+  // Acciones no críticas para la primera pantalla — corren en background
+  actions.setFCMToken();
+  actions.appTracking();
+  actions.inAppUpdate();
 }
 
 class MyApp extends StatefulWidget {

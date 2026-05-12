@@ -188,6 +188,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: TermosPageWidget.routeName,
           path: TermosPageWidget.routePath,
           builder: (context, params) => TermosPageWidget(),
+        ),
+        FFRoute(
+          name: NotificationsPageWidget.routeName,
+          path: NotificationsPageWidget.routePath,
+          builder: (context, params) => NotificationsPageWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

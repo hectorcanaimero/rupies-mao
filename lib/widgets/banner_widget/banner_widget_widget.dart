@@ -2,8 +2,10 @@ import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/widgets/not_image_widget/not_image_widget_widget.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'banner_widget_model.dart';
 export 'banner_widget_model.dart';
 
@@ -112,14 +114,43 @@ class _BannerWidgetWidgetState extends State<BannerWidgetWidget> {
                             },
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(9.0),
-                              child: Image.network(
-                                valueOrDefault<String>(
+                              child: CachedNetworkImage(
+                                imageUrl: valueOrDefault<String>(
                                   bannerItem.image,
                                   'https://images.unsplash.com/photo-1519389950473-47ba0277781c',
                                 ),
                                 width: double.infinity,
                                 height: widget.height,
                                 fit: BoxFit.cover,
+                                fadeInDuration:
+                                    const Duration(milliseconds: 250),
+                                placeholder: (context, url) {
+                                  final theme = FlutterFlowTheme.of(context);
+                                  return Shimmer.fromColors(
+                                    baseColor: theme.alternate,
+                                    highlightColor: theme.secondaryBackground
+                                        .withValues(alpha: 0.6),
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: widget.height,
+                                      color: Colors.white,
+                                    ),
+                                  );
+                                },
+                                errorWidget: (context, url, error) {
+                                  final theme = FlutterFlowTheme.of(context);
+                                  return Container(
+                                    width: double.infinity,
+                                    height: widget.height,
+                                    color: theme.alternate,
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 48.0,
+                                      color: theme.secondaryText,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           );

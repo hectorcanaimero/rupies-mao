@@ -1,5 +1,6 @@
 import '/backend/schema/enums/enums.dart';
 import '/backend/supabase/supabase.dart';
+import '/custom_code/widgets/index.dart' as widgets;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/widgets/header_widget/header_widget_widget.dart';
@@ -26,6 +27,15 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  static const int _pageSize = 20;
+
+  final ScrollController _scrollController = ScrollController();
+  final List<ViewServicesWithCategoriesFilteredRow> _items = [];
+  bool _isLoadingInitial = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  Object? _loadError;
+
   @override
   void initState() {
     super.initState();
@@ -33,14 +43,83 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
 
     logFirebaseEvent('screen_view',
         parameters: {'screen_name': 'ServicesPage'});
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitial());
   }
 
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _model.dispose();
 
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_isLoadingMore || _isLoadingInitial || !_hasMore) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 300) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadInitial() async {
+    if (mounted) {
+      safeSetState(() {
+        _isLoadingInitial = true;
+        _loadError = null;
+      });
+    }
+    try {
+      final rows =
+          await ViewServicesWithCategoriesFilteredTable().queryRows(
+        queryFn: (q) =>
+            q.order('created_at', ascending: false).range(0, _pageSize - 1),
+      );
+      if (!mounted) return;
+      safeSetState(() {
+        _items
+          ..clear()
+          ..addAll(rows);
+        _isLoadingInitial = false;
+        _hasMore = rows.length == _pageSize;
+      });
+    } catch (e, stack) {
+      debugPrint('ServicesPage initial load failed: $e\n$stack');
+      if (!mounted) return;
+      safeSetState(() {
+        _isLoadingInitial = false;
+        _loadError = e;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+    safeSetState(() => _isLoadingMore = true);
+    final from = _items.length;
+    final to = from + _pageSize - 1;
+    try {
+      final rows =
+          await ViewServicesWithCategoriesFilteredTable().queryRows(
+        queryFn: (q) =>
+            q.order('created_at', ascending: false).range(from, to),
+      );
+      if (!mounted) return;
+      safeSetState(() {
+        _items.addAll(rows);
+        _isLoadingMore = false;
+        _hasMore = rows.length == _pageSize;
+      });
+    } catch (e, stack) {
+      debugPrint('ServicesPage load more failed: $e\n$stack');
+      if (!mounted) return;
+      safeSetState(() => _isLoadingMore = false);
+    }
   }
 
   @override
@@ -71,62 +150,65 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                     ),
                   ),
                   Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      decoration: BoxDecoration(),
-                      child: SingleChildScrollView(
-                        primary: false,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(),
-                              child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    15.0, 0.0, 15.0, 0.0),
-                                child: FutureBuilder<
-                                    List<
-                                        ViewServicesWithCategoriesFilteredRow>>(
-                                  future:
-                                      ViewServicesWithCategoriesFilteredTable()
-                                          .queryRows(
-                                    queryFn: (q) => q,
-                                  ),
-                                  builder: (context, snapshot) {
-                                    // Customize what your widget looks like when it's loading.
-                                    if (!snapshot.hasData) {
-                                      return Center(
-                                        child: SizedBox(
-                                          width: 50.0,
-                                          height: 50.0,
-                                          child: CircularProgressIndicator(
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                              FlutterFlowTheme.of(context)
-                                                  .primary,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    List<ViewServicesWithCategoriesFilteredRow>
-                                        listViewViewServicesWithCategoriesFilteredRowList =
-                                        snapshot.data!;
-
-                                    return ListView.builder(
-                                      padding: EdgeInsets.zero,
-                                      primary: false,
-                                      shrinkWrap: true,
-                                      scrollDirection: Axis.vertical,
-                                      itemCount:
-                                          listViewViewServicesWithCategoriesFilteredRowList
-                                              .length,
-                                      itemBuilder: (context, listViewIndex) {
-                                        final listViewViewServicesWithCategoriesFilteredRow =
-                                            listViewViewServicesWithCategoriesFilteredRowList[
-                                                listViewIndex];
-                                        return Padding(
+                    child: Builder(
+                      builder: (context) {
+                        if (_isLoadingInitial) {
+                          return ListView.builder(
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                                15.0, 12.0, 15.0, 100.0),
+                            itemCount: 5,
+                            itemBuilder: (_, __) =>
+                                const widgets.ServiceCardSkeleton(),
+                          );
+                        }
+                        if (_loadError != null && _items.isEmpty) {
+                          return RefreshIndicator(
+                            onRefresh: _loadInitial,
+                            color: FlutterFlowTheme.of(context).primary,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 24.0),
+                              child: widgets.FeedStateWidget(
+                                variant: widgets.FeedStateVariant.error,
+                                message:
+                                    'Não foi possível carregar os serviços',
+                                actionLabel: 'Tentar novamente',
+                                onAction: _loadInitial,
+                              ),
+                            ),
+                          );
+                        }
+                        if (_items.isEmpty) {
+                          return RefreshIndicator(
+                            onRefresh: _loadInitial,
+                            color: FlutterFlowTheme.of(context).primary,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 24.0),
+                              child: widgets.FeedStateWidget(
+                                variant: widgets.FeedStateVariant.empty,
+                                message: 'Nenhum serviço disponível',
+                              ),
+                            ),
+                          );
+                        }
+                        return RefreshIndicator(
+                          onRefresh: _loadInitial,
+                          color: FlutterFlowTheme.of(context).primary,
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                                15.0, 12.0, 15.0, 100.0),
+                            itemCount:
+                                _items.length + (_isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, listViewIndex) {
+                              if (listViewIndex >= _items.length) {
+                                return const widgets.ServiceCardSkeleton();
+                              }
+                              final row = _items[listViewIndex];
+                              return Padding(
                                           padding:
                                               EdgeInsetsDirectional.fromSTEB(
                                                   0.0, 0.0, 0.0, 15.0),
@@ -168,7 +250,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                           .routeName,
                                                       queryParameters: {
                                                         'uid': serializeParam(
-                                                          listViewViewServicesWithCategoriesFilteredRow
+                                                          row
                                                               .id,
                                                           ParamType.String,
                                                         ),
@@ -225,7 +307,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                           TextSpan(
                                                                             text:
                                                                                 valueOrDefault<String>(
-                                                                              listViewViewServicesWithCategoriesFilteredRow.jobType,
+                                                                              row.jobType,
                                                                               'Job',
                                                                             ),
                                                                             style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -257,7 +339,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                           TextSpan(
                                                                             text:
                                                                                 valueOrDefault<String>(
-                                                                              listViewViewServicesWithCategoriesFilteredRow.categoryName,
+                                                                              row.categoryName,
                                                                               'Categoria',
                                                                             ),
                                                                             style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -307,7 +389,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                     Text(
                                                                       valueOrDefault<
                                                                           String>(
-                                                                        listViewViewServicesWithCategoriesFilteredRow
+                                                                        row
                                                                             .name,
                                                                         'Name',
                                                                       ).maybeHandleOverflow(
@@ -371,7 +453,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                                 TextSpan(
                                                                                   text: dateTimeFormat(
                                                                                     "d/M/y",
-                                                                                    listViewViewServicesWithCategoriesFilteredRow.dateStart!,
+                                                                                    row.dateStart!,
                                                                                     locale: FFLocalizations.of(context).languageCode,
                                                                                   ),
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -402,7 +484,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                                 TextSpan(
                                                                                   text: dateTimeFormat(
                                                                                     "d/M/y",
-                                                                                    listViewViewServicesWithCategoriesFilteredRow.dateEnd!,
+                                                                                    row.dateEnd!,
                                                                                     locale: FFLocalizations.of(context).languageCode,
                                                                                   ),
                                                                                   style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -454,7 +536,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                           ),
                                                                           Text(
                                                                             valueOrDefault<String>(
-                                                                              listViewViewServicesWithCategoriesFilteredRow.time,
+                                                                              row.time,
                                                                               '12:00',
                                                                             ),
                                                                             style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -519,7 +601,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                           0.0),
                                                                   child: Text(
                                                                     formatNumber(
-                                                                      listViewViewServicesWithCategoriesFilteredRow
+                                                                      row
                                                                           .price!,
                                                                       formatType:
                                                                           FormatType
@@ -561,7 +643,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                             Builder(
                                                               builder:
                                                                   (context) {
-                                                                if (listViewViewServicesWithCategoriesFilteredRow
+                                                                if (row
                                                                         .condition ==
                                                                     Conditions
                                                                         .Openned
@@ -646,7 +728,7 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                                                             3.0),
                                                                         child:
                                                                             Text(
-                                                                          '+ ${listViewViewServicesWithCategoriesFilteredRow.candidated?.toString()} Candidatos',
+                                                                          '+ ${row.candidated?.toString()} Candidatos',
                                                                           style: FlutterFlowTheme.of(context)
                                                                               .bodyMedium
                                                                               .override(
@@ -677,17 +759,10 @@ class _ServicesPageWidgetState extends State<ServicesPageWidget> {
                                             ),
                                           ),
                                         );
-                                      },
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ]
-                              .addToStart(SizedBox(height: 12.0))
-                              .addToEnd(SizedBox(height: 100.0)),
-                        ),
-                      ),
+                            },
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

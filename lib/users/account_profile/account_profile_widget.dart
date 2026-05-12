@@ -2248,6 +2248,33 @@ class _AccountProfileWidgetState extends State<AccountProfileWidget> {
                                                       logFirebaseEvent(
                                                           'ACCOUNT_PROFILE_Categories_ON_FORM_WIDGE');
                                                       if (containerViewUsersSkillWithCategoriesRowList
+                                                          .isNotEmpty) {
+                                                        logFirebaseEvent(
+                                                            'Categories_limit_alert_dialog');
+                                                        await showDialog(
+                                                          context: context,
+                                                          builder:
+                                                              (alertDialogContext) {
+                                                            return AlertDialog(
+                                                              title:
+                                                                  Text('Opa!'),
+                                                              content: Text(
+                                                                  'Você só pode ter uma habilidade. Remova a atual primeiro.'),
+                                                              actions: [
+                                                                TextButton(
+                                                                  onPressed: () =>
+                                                                      Navigator.pop(
+                                                                          alertDialogContext),
+                                                                  child: Text(
+                                                                      'Ok'),
+                                                                ),
+                                                              ],
+                                                            );
+                                                          },
+                                                        );
+                                                        return;
+                                                      }
+                                                      if (containerViewUsersSkillWithCategoriesRowList
                                                               .where((e) =>
                                                                   e.categoryId ==
                                                                   _model

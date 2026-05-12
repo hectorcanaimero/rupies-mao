@@ -1,5 +1,9 @@
+import '/auth/supabase_auth/auth_util.dart';
+import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/pages/notifications_page/notifications_page_widget.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,6 +20,7 @@ class HeaderWidgetWidget extends StatefulWidget {
 
 class _HeaderWidgetWidgetState extends State<HeaderWidgetWidget> {
   late HeaderWidgetModel _model;
+  Future<int>? _notificationCountFuture;
 
   @override
   void setState(VoidCallback callback) {
@@ -27,6 +32,13 @@ class _HeaderWidgetWidgetState extends State<HeaderWidgetWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => HeaderWidgetModel());
+
+    _notificationCountFuture = SupaFlow.client
+        .from('notifications')
+        .select('id')
+        .eq('recipient_id', currentUserUid)
+        .eq('is_read', false)
+        .then<int>((data) => (data as List).length);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
@@ -71,12 +83,26 @@ class _HeaderWidgetWidgetState extends State<HeaderWidgetWidget> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                       ),
-                      child: Image.network(
-                        valueOrDefault<String>(
+                      child: CachedNetworkImage(
+                        imageUrl: valueOrDefault<String>(
                           FFAppState().user.photoUrl,
                           'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/rupies-profissional-93jipj/assets/i2ozq2kadrah/dog_avatar.gif',
                         ),
                         fit: BoxFit.cover,
+                        fadeInDuration: const Duration(milliseconds: 200),
+                        placeholder: (context, url) => Container(
+                          color: const Color(0xFF9E9E9E),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: const Color(0xFF9E9E9E),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.person,
+                            size: 24.0,
+                            color: FlutterFlowTheme.of(context)
+                                .primaryBackground,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -137,11 +163,20 @@ class _HeaderWidgetWidgetState extends State<HeaderWidgetWidget> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(0.0),
-                        child: Image.network(
-                          FFAppState().user.seloProfImg,
+                        child: CachedNetworkImage(
+                          imageUrl: FFAppState().user.seloProfImg,
                           width: 30.0,
                           height: 30.0,
                           fit: BoxFit.cover,
+                          fadeInDuration: const Duration(milliseconds: 200),
+                          placeholder: (context, url) => const SizedBox(
+                            width: 30.0,
+                            height: 30.0,
+                          ),
+                          errorWidget: (context, url, error) => const SizedBox(
+                            width: 30.0,
+                            height: 30.0,
+                          ),
                         ),
                       ),
                       Text(
@@ -164,6 +199,49 @@ class _HeaderWidgetWidgetState extends State<HeaderWidgetWidget> {
                     ].divide(SizedBox(width: 6.0)),
                   ),
                 ),
+              FutureBuilder<int>(
+                future: _notificationCountFuture,
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.notifications_outlined,
+                          color: FlutterFlowTheme.of(context).primaryText,
+                          size: 26.0,
+                        ),
+                        onPressed: () => context
+                            .pushNamed(NotificationsPageWidget.routeName),
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context).error,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ].divide(SizedBox(width: 9.0)),
           ),
         ),
