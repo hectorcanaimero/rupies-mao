@@ -264,6 +264,26 @@ class _ServiceCandidatedPageWidgetState
                           onPressed: () async {
                             logFirebaseEvent(
                                 'SERVICE_CANDIDATED_CANDIDATE_SE_BTN_ON_T');
+
+                            final existing =
+                                await ServicesCandidatedTable().queryRows(
+                              queryFn: (q) => q
+                                  .eqOrNull('serviceId', widget.id)
+                                  .eqOrNull('userId', currentUserUid),
+                            );
+                            if (existing.isNotEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'Você já se candidatou a este serviço.'),
+                                  backgroundColor:
+                                      FlutterFlowTheme.of(context).warning,
+                                ),
+                              );
+                              context.goNamed(HomePageWidget.routeName);
+                              return;
+                            }
+
                             logFirebaseEvent('Button_alert_dialog');
                             await showDialog(
                               context: context,
