@@ -13,7 +13,7 @@ class NotificationsPageWidget extends StatefulWidget {
   const NotificationsPageWidget({super.key});
 
   static String routeName = 'NotificationsPage';
-  static String routePath = 'notificationsPage';
+  static String routePath = '/notificationsPage';
 
   @override
   State<NotificationsPageWidget> createState() =>
